@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SAMPLE_HISTORY_KEY, SAMPLE_RETENTION_MS, pruneSampleHistory, parseSampleHistory, writeSampleHistory, sampleLocation, compareTemperatures, compareHumidity, formatDifference } from '../src/sampleHistory.js';
+import { SAMPLE_HISTORY_KEY, SAMPLE_RETENTION_MS, pruneSampleHistory, parseSampleHistory, writeSampleHistory, sampleLocation, shouldCaptureSample, compareTemperatures, compareHumidity, formatDifference } from '../src/sampleHistory.js';
 
 const sample = { id: 'sample-1', recordedAt: 10000000, temperature: 28.4, humidity: 64, phase: 'misting', outdoor: null };
 
@@ -38,4 +38,11 @@ test('pruning sample snapshots never touches actual-system history', () => {
 test('preserves the location of older sample snapshots', () => {
   assert.equal(sampleLocation(sample), 'Las Piñas');
   assert.equal(sampleLocation({ ...sample, location: 'Manila' }), 'Manila');
+});
+
+test('starts a new snapshot when the weather location changes', () => {
+  const manila = { ...sample, location: 'Manila' };
+  assert.equal(shouldCaptureSample([manila], 'Las Piñas', sample.recordedAt + 1000), true);
+  assert.equal(shouldCaptureSample([sample], 'Las Piñas', sample.recordedAt + 1000), false);
+  assert.equal(shouldCaptureSample([sample], 'Las Piñas', sample.recordedAt + 15 * 60000), true);
 });
