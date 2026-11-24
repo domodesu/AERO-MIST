@@ -1,6 +1,6 @@
 # AERO-MIST
 
-A responsive dashboard for monitoring an AERO-MIST cooling system. The sidebar separates outdoor weather (Environment) from sample temperature, humidity, heat index, battery, comfort, and misting/cooldown timers (AERO-MIST system).
+A responsive dashboard for monitoring an AERO-MIST cooling system. The sidebar separates outdoor weather (Environment) from sample temperature, humidity, heat index, battery, comfort, and misting/cooldown timers (AERO-MIST system). The History tab is an empty state; recording and viewing real historical activity requires a connected device and shared storage, neither of which is implemented yet.
 
 ## Run locally
 

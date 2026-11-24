@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Activity, ArrowDownRight, ArrowRight, BatteryMedium, Check, ChevronDown, CircleHelp, Clock3, Cloud, Droplets, Gauge, LayoutDashboard, Leaf, Menu, Moon, Radio, RefreshCw, Settings2, Sparkles, Sun, Thermometer, Timer, Wind, X, Zap } from 'lucide-react';
+import { Activity, ArrowDownRight, ArrowRight, BatteryMedium, Check, ChevronDown, CircleHelp, Clock3, Cloud, Droplets, Gauge, History, LayoutDashboard, Leaf, Menu, Moon, Radio, RefreshCw, Settings2, Sparkles, Sun, Thermometer, Timer, Wind, X, Zap } from 'lucide-react';
 import './styles.css';
 import WeatherPanel from './WeatherPanel';
+import HistoryPanel from './HistoryPanel';
+import { pageFromHash } from './navigation';
 import { getDemoCycle, getDemoStartTime } from './demoCycle';
 import { readTheme, saveTheme, THEME_STORAGE_KEY } from './theme';
 import { isMenuOpenSwipe } from './swipe';
@@ -34,6 +36,7 @@ function Sidebar({ open, onClose, tab, theme, setTheme }) {
     <div className="nav-label">WORKSPACE</div>
     <a className={`nav-item ${tab === 'environment' ? 'active' : ''}`} href="#environment" onClick={onClose} aria-current={tab === 'environment' ? 'page' : undefined}><Cloud size={18}/><span>Environment</span>{tab === 'environment' && <span className="active-dot" />}</a>
     <a className={`nav-item ${tab === 'system' ? 'active' : ''}`} href="#system" onClick={onClose} aria-current={tab === 'system' ? 'page' : undefined}><LayoutDashboard size={18}/><span>AERO-MIST system</span>{tab === 'system' && <span className="active-dot" />}</a>
+    <a className={`nav-item ${tab === 'history' ? 'active' : ''}`} href="#history" onClick={onClose} aria-current={tab === 'history' ? 'page' : undefined}><History size={18}/><span>History</span>{tab === 'history' && <span className="active-dot" />}</a>
     <div className="sidebar-bottom">
       <div className="sidebar-note"><div className="note-icon"><Leaf size={17}/></div><strong>A little cooler, naturally.</strong><p>A better environment starts with a little mist.</p><div className="note-decoration"><Wind size={70}/></div></div>
       <div className="sidebar-foot"><div className="foot-avatar">A</div><div><strong>AERO-MIST</strong><span>Environment monitor</span></div><div className="theme-settings" ref={settingsRef}>
@@ -57,7 +60,7 @@ function TrendChart({ range, unit }) {
 }
 function App() {
   const [theme, setTheme] = useState(() => { try { return readTheme(window.localStorage); } catch { return 'light'; } });
-  const [tab, setTab] = useState(() => window.location.hash === '#environment' ? 'environment' : 'system');
+  const [tab, setTab] = useState(() => pageFromHash(window.location.hash));
   const [unit, setUnit] = useState('C');
   const [range, setRange] = useState('24 hours');
   const [readings, setReadings] = useState(initialReadings);
@@ -78,7 +81,7 @@ function App() {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
   useEffect(() => {
-    const onHashChange = () => setTab(window.location.hash === '#environment' ? 'environment' : 'system');
+    const onHashChange = () => setTab(pageFromHash(window.location.hash));
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
@@ -108,13 +111,14 @@ function App() {
     };
   }, [menuOpen]);
   useEffect(() => { const id = setInterval(() => setCycle(getDemoCycle(cycleStart)), 1000); return () => clearInterval(id); }, [cycleStart]);
+  const pageTitle = tab === 'environment' ? 'Environment' : tab === 'history' ? 'History' : 'AERO-MIST system';
   const temperature = n => unit === 'C' ? n.toFixed(1) : (n * 9 / 5 + 32).toFixed(1);
   const date = useMemo(() => new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }), []);
   function refresh() { setRefreshing(true); setReadings(initialReadings); setUpdated(new Date()); setTimeout(() => setRefreshing(false), 500); }
   return <div className="app-shell"><Sidebar open={menuOpen} onClose={()=>setMenuOpen(false)} tab={tab} theme={theme} setTheme={setTheme}/><main className="main" id="overview">
-    <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-button" onClick={()=>setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen} aria-controls="sidebar-navigation"><Menu size={21}/></button><span className="breadcrumb-muted">Workspace</span><span className="breadcrumb-slash">/</span><strong>{tab === 'environment' ? 'Environment' : 'AERO-MIST system'}</strong></div><div className="topbar-right"><span className="demo-pill"><span/> {tab === 'environment' ? 'Outdoor estimates' : 'Sample data'}</span><button className="help-button" title={tab === 'environment' ? 'Weather is a regional model estimate from Open-Meteo.' : 'Device readings are samples; no AERO-MIST device is connected.'} aria-label={tab === 'environment' ? 'About outdoor weather' : 'About sample data'}><CircleHelp size={19}/></button><div className="top-avatar">A</div></div></header>
-    <div className="content"><div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line"/> {tab === 'environment' ? 'OUTDOOR CONDITIONS' : 'YOUR SYSTEM, AT A GLANCE'}</div><h1>{tab === 'environment' ? 'Environment' : 'AERO-MIST system'}<span>.</span></h1><p>{tab === 'environment' ? 'Weather around Las Piñas, separate from your system readings.' : 'Your misting system readings, timers and comfort.'}</p></div><div className="heading-actions"><div className="date"><Clock3 size={15}/>{date}</div>{tab === 'system' ? <button className="refresh-button" onClick={refresh}><RefreshCw size={15} className={refreshing ? 'spinning' : ''}/> Refresh data</button> : <button className="refresh-button" onClick={()=>setUnit(unit === 'C' ? 'F' : 'C')} aria-label={`Change temperature unit; currently ${unit === 'C' ? 'Celsius' : 'Fahrenheit'}`}>°{unit} <ChevronDown size={13}/></button>}</div></div>
-    {tab === 'environment' ? <><div className="environment-intro"><Cloud size={18}/><span>Outdoor weather is a regional model estimate, not a reading from your AERO-MIST device.</span></div><WeatherPanel unit={unit}/></> : <>
+    <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-button" onClick={()=>setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen} aria-controls="sidebar-navigation"><Menu size={21}/></button><span className="breadcrumb-muted">Workspace</span><span className="breadcrumb-slash">/</span><strong>{pageTitle}</strong></div><div className="topbar-right"><span className="demo-pill"><span/> {tab === 'environment' ? 'Outdoor estimates' : tab === 'history' ? 'Not connected' : 'Sample data'}</span><button className="help-button" title={tab === 'environment' ? 'Weather is a regional model estimate from Open-Meteo.' : tab === 'history' ? 'System history requires a connected device and storage.' : 'Device readings are samples; no AERO-MIST device is connected.'} aria-label={tab === 'environment' ? 'About outdoor weather' : tab === 'history' ? 'About system history' : 'About sample data'}><CircleHelp size={19}/></button><div className="top-avatar">A</div></div></header>
+    <div className="content"><div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line"/> {tab === 'environment' ? 'OUTDOOR CONDITIONS' : tab === 'history' ? 'YOUR SYSTEM, OVER TIME' : 'YOUR SYSTEM, AT A GLANCE'}</div><h1>{pageTitle}<span>.</span></h1><p>{tab === 'environment' ? 'Weather around Las Piñas, separate from your system readings.' : tab === 'history' ? 'A place for your past system activity and readings.' : 'Your misting system readings, timers and comfort.'}</p></div><div className="heading-actions"><div className="date"><Clock3 size={15}/>{date}</div>{tab === 'system' ? <button className="refresh-button" onClick={refresh}><RefreshCw size={15} className={refreshing ? 'spinning' : ''}/> Refresh data</button> : tab === 'environment' ? <button className="refresh-button" onClick={()=>setUnit(unit === 'C' ? 'F' : 'C')} aria-label={`Change temperature unit; currently ${unit === 'C' ? 'Celsius' : 'Fahrenheit'}`}>°{unit} <ChevronDown size={13}/></button> : null}</div></div>
+    {tab === 'environment' ? <><div className="environment-intro"><Cloud size={18}/><span>Outdoor weather is a regional model estimate, not a reading from your AERO-MIST device.</span></div><WeatherPanel unit={unit}/></> : tab === 'history' ? <HistoryPanel/> : <>
     <div className="demo-banner"><Sparkles size={16}/><span><strong>System not connected.</strong> Readings, comfort and timers are sample data until your device is connected.</span></div>
     <section className="hero" aria-label="System overview"><div className="hero-copy"><div className="hero-overline"><span className="live-dot"/> YOUR COOLING COMPANION</div><h2>A breath of fresh air<span>.</span></h2><p>A more comfortable space is just a mist away.<br/>AERO-MIST device data will appear here when connected.</p><div className="hero-status"><span className="status-icon"><Radio size={15}/></span><div><strong>System preview</strong><small>Sample device · No device connected</small></div></div></div><div className="hero-art" aria-hidden="true"><div className="orbit orbit-1"/><div className="orbit orbit-2"/><div className="orbit orbit-3"/><div className="art-core"><Wind size={58} strokeWidth={1.1}/></div><span className="art-dot dot-one"/><span className="art-dot dot-two"/><span className="art-dot dot-three"/><div className="art-label"><Droplets size={14}/> MADE FOR COMFORT</div></div><div className="hero-index">01 / AERO-MIST SYSTEM</div></section>
     <div className="section-heading conditions-heading"><div><div className="section-kicker">THE LATEST SAMPLE DEVICE READINGS</div><h2>Current conditions <span className="heading-dot">●</span></h2></div><div className="updated"><span/> Updated {formatTime(updated)} <span className="updated-divider">|</span> <button className="unit-toggle" onClick={()=>setUnit(unit === 'C' ? 'F' : 'C')} aria-label={`Change temperature unit; currently ${unit === 'C' ? 'Celsius' : 'Fahrenheit'}`}>°{unit} <ChevronDown size={13}/></button></div></div>
