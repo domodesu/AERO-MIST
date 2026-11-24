@@ -13,6 +13,12 @@ export function safeTimeZone(zone) {
   try { new Intl.DateTimeFormat('en', { timeZone: zone }).format(); return zone; } catch { return 'UTC'; }
 }
 
+// Asia/Manila is the standard time-zone identifier for all of the Philippines, including Las Piñas.
+export function weatherTimeZoneLabel(zone) {
+  const safe = safeTimeZone(zone);
+  return safe === 'Asia/Manila' ? 'Philippine time' : safe;
+}
+
 export function formatWeatherTime(value, zone = 'Asia/Manila') {
   return new Intl.DateTimeFormat('en-PH', { timeZone: safeTimeZone(zone), month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(value));
 }

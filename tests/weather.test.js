@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createWeatherUrl, formatWeatherTime, parseWeather, safeTimeZone, WEATHER_URL } from '../src/weather.js';
+import { createWeatherUrl, formatWeatherTime, parseWeather, safeTimeZone, weatherTimeZoneLabel, WEATHER_URL } from '../src/weather.js';
 
 const response = { timezone: 'Asia/Manila', current: { time: 1795539600, temperature_2m: 27.7, relative_humidity_2m: 80, apparent_temperature: 31.8 } };
 
@@ -31,4 +31,10 @@ test('rejects missing, invalid or null readings rather than displaying zero', ()
   for (const input of [null, {}, { current: { ...response.current, temperature_2m: null } }, { current: { ...response.current, relative_humidity_2m: 101 } }, { current: { ...response.current, time: 'invalid' } }]) {
     assert.throws(() => parseWeather(input));
   }
+});
+
+test('labels the Philippine time zone without mistaking it for the weather location', () => {
+  assert.equal(weatherTimeZoneLabel('Asia/Manila'), 'Philippine time');
+  assert.equal(weatherTimeZoneLabel('Asia/Tokyo'), 'Asia/Tokyo');
+  assert.equal(weatherTimeZoneLabel('Invalid/Zone'), 'UTC');
 });

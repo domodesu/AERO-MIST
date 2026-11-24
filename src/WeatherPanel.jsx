@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CloudSun, Droplets, LocateFixed, MapPin, RefreshCw, Thermometer, Wind } from 'lucide-react';
-import { createWeatherUrl, formatWeatherTime, parseWeather } from './weather';
+import { createWeatherUrl, formatWeatherTime, weatherTimeZoneLabel, parseWeather } from './weather';
 
 export default function WeatherPanel({ unit, locationControl }) {
   const { location, status, message, useCurrent, useDefault } = locationControl;
@@ -46,7 +46,7 @@ export default function WeatherPanel({ unit, locationControl }) {
       <div><div className="section-kicker">OUTSIDE YOUR WINDOW</div><h2 id="weather-heading">Local weather <span className="heading-dot">●</span></h2><p><MapPin size={13}/> {location.label}</p></div>
       <button className="refresh-button weather-refresh" onClick={refresh} disabled={loading} aria-label={`Refresh weather for ${location.name}`}><RefreshCw size={15} className={loading ? 'spinning' : ''}/>{loading ? 'Updating' : 'Refresh'}</button>
     </div>
-    <div className="location-control"><div className="location-control-copy"><strong><LocateFixed size={15}/> Weather location</strong><p>{location.source === 'current' ? 'Following this device approximately. Weather is not necessarily at the AERO-MIST unit.' : 'Using Las Piñas by default. Choose your location to follow this device.'}</p><small>With your permission, your coordinates are sent to Open-Meteo for weather.</small></div><div className="location-actions"><button type="button" onClick={useCurrent} disabled={status === 'requesting' || status === 'current'}>{status === 'requesting' ? 'Getting location…' : status === 'current' ? 'Location enabled' : 'Use my location'}</button>{(location.source === 'current' || status === 'requesting' || status === 'error') && <button type="button" onClick={useDefault}>Use Las Piñas</button>}</div></div>
+    <div className="location-control"><div className="location-control-copy"><strong><LocateFixed size={15}/> Weather location</strong><p>{location.source === 'current' ? 'Following your device’s approximate location for local weather.' : 'Using Las Piñas by default. Choose your location to follow this device.'}</p><small>With your permission, your location is shared with a weather provider.</small></div><div className="location-actions"><button type="button" onClick={useCurrent} disabled={status === 'requesting' || status === 'current'}>{status === 'requesting' ? 'Getting location…' : status === 'current' ? 'Location enabled' : 'Use my location'}</button>{(location.source === 'current' || status === 'requesting' || status === 'error') && <button type="button" onClick={useDefault}>Use Las Piñas</button>}</div></div>
     {message && <div className="location-message" role="status">{message}</div>}
     {weather ? <>
       <div className="weather-values">
@@ -54,9 +54,8 @@ export default function WeatherPanel({ unit, locationControl }) {
         <div><span className="weather-icon blue"><Droplets size={18}/></span><span><small>OUTDOOR HUMIDITY</small><strong>{weather.humidity}%</strong></span></div>
         <div><span className="weather-icon peach"><Wind size={18}/></span><span><small>APPARENT TEMPERATURE</small><strong>{temperature(weather.apparent)}</strong></span></div>
       </div>
-      <div className="weather-meta"><span><CloudSun size={14}/> Model time: {formatWeatherTime(weather.time, weather.timeZone)} ({weather.timeZone})</span><span>Refreshes every 15 min</span></div>
+      <div className="weather-meta"><span><CloudSun size={14}/> Model time: {formatWeatherTime(weather.time, weather.timeZone)} ({weatherTimeZoneLabel(weather.timeZone)})</span><span>Refreshes every 15 min</span></div>
     </> : <div className="weather-empty" role="status">{loading || !error ? `Loading weather for ${location.name}…` : 'Weather is unavailable right now. Please try refreshing.'}</div>}
     {error && weather && <div className="weather-error" role="status">Couldn’t refresh weather. Showing the last available result, which may be outdated.</div>}
-    <div className="weather-source">Outdoor model estimates, not AERO-MIST sensor readings. Apparent temperature is not the heat index. Data: <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a></div>
   </section>;
 }
