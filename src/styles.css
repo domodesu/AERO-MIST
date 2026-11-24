@@ -115,3 +115,5 @@
   .timer-value { margin-left: 46px; text-align: left; }
   .sample-tag { max-width: 100px; }
 }
+
+.environment-intro{display:flex;align-items:center;gap:10px;padding:13px 15px;border:1px solid #e2efe5;border-radius:8px;background:#edf6ef;color:#688174;font-size:12px;line-height:1.5}.environment-intro svg{flex-shrink:0;color:#45a780}.nav-item span:not(.active-dot){white-space:nowrap}@media(max-width:600px){.environment-intro{align-items:flex-start;font-size:11px}.environment-intro svg{margin-top:1px}.topbar-left strong{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.topbar-right .demo-pill{white-space:nowrap}}
