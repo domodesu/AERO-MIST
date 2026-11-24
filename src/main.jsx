@@ -5,6 +5,7 @@ import './styles.css';
 import WeatherPanel from './WeatherPanel';
 import { getDemoCycle, getDemoStartTime } from './demoCycle';
 import { readTheme, saveTheme, THEME_STORAGE_KEY } from './theme';
+import { isMenuOpenSwipe } from './swipe';
 
 const initialReadings = { temperature: 28.4, humidity: 64, heatIndex: 31.2, battery: 78 };
 const ranges = ['24 hours', '7 days', '30 days'];
@@ -28,7 +29,7 @@ function Sidebar({ open, onClose, tab, theme, setTheme }) {
     document.addEventListener('keydown', closeOnEscape);
     return () => { document.removeEventListener('pointerdown', closeOutside); document.removeEventListener('keydown', closeOnEscape); };
   }, [settingsOpen]);
-  return <><div className={`sidebar-overlay ${open ? 'show' : ''}`} onClick={onClose} /> <aside className={`sidebar ${open ? 'open' : ''}`}>
+  return <><div className={`sidebar-overlay ${open ? 'show' : ''}`} onClick={onClose} /> <aside id="sidebar-navigation" className={`sidebar ${open ? 'open' : ''}`}>
     <div className="sidebar-top"><Brand /><button className="close-menu icon-button" onClick={onClose} aria-label="Close menu"><X size={19}/></button></div>
     <div className="nav-label">WORKSPACE</div>
     <a className={`nav-item ${tab === 'environment' ? 'active' : ''}`} href="#environment" onClick={onClose} aria-current={tab === 'environment' ? 'page' : undefined}><Cloud size={18}/><span>Environment</span>{tab === 'environment' && <span className="active-dot" />}</a>
@@ -81,12 +82,37 @@ function App() {
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
+  useEffect(() => {
+    let start = null;
+    const onTouchStart = event => {
+      start = null;
+      if (menuOpen || !window.matchMedia('(max-width: 850px)').matches || event.touches.length !== 1) return;
+      if (event.target instanceof Element && event.target.closest('button, a, input, select, textarea, [contenteditable="true"], [role="button"], [role="slider"]')) return;
+      const touch = event.touches[0];
+      start = { x: touch.clientX, y: touch.clientY, id: touch.identifier };
+    };
+    const onTouchEnd = event => {
+      if (!start || event.touches.length !== 0) { start = null; return; }
+      const touch = Array.from(event.changedTouches).find(item => item.identifier === start.id);
+      if (touch && isMenuOpenSwipe(start, { x: touch.clientX, y: touch.clientY })) setMenuOpen(true);
+      start = null;
+    };
+    const onTouchCancel = () => { start = null; };
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
+    document.addEventListener('touchcancel', onTouchCancel, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchcancel', onTouchCancel);
+    };
+  }, [menuOpen]);
   useEffect(() => { const id = setInterval(() => setCycle(getDemoCycle(cycleStart)), 1000); return () => clearInterval(id); }, [cycleStart]);
   const temperature = n => unit === 'C' ? n.toFixed(1) : (n * 9 / 5 + 32).toFixed(1);
   const date = useMemo(() => new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }), []);
   function refresh() { setRefreshing(true); setReadings(initialReadings); setUpdated(new Date()); setTimeout(() => setRefreshing(false), 500); }
   return <div className="app-shell"><Sidebar open={menuOpen} onClose={()=>setMenuOpen(false)} tab={tab} theme={theme} setTheme={setTheme}/><main className="main" id="overview">
-    <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-button" onClick={()=>setMenuOpen(true)} aria-label="Open menu"><Menu size={21}/></button><span className="breadcrumb-muted">Workspace</span><span className="breadcrumb-slash">/</span><strong>{tab === 'environment' ? 'Environment' : 'AERO-MIST system'}</strong></div><div className="topbar-right"><span className="demo-pill"><span/> {tab === 'environment' ? 'Outdoor estimates' : 'Sample data'}</span><button className="help-button" title={tab === 'environment' ? 'Weather is a regional model estimate from Open-Meteo.' : 'Device readings are samples; no AERO-MIST device is connected.'} aria-label={tab === 'environment' ? 'About outdoor weather' : 'About sample data'}><CircleHelp size={19}/></button><div className="top-avatar">A</div></div></header>
+    <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-button" onClick={()=>setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen} aria-controls="sidebar-navigation"><Menu size={21}/></button><span className="breadcrumb-muted">Workspace</span><span className="breadcrumb-slash">/</span><strong>{tab === 'environment' ? 'Environment' : 'AERO-MIST system'}</strong></div><div className="topbar-right"><span className="demo-pill"><span/> {tab === 'environment' ? 'Outdoor estimates' : 'Sample data'}</span><button className="help-button" title={tab === 'environment' ? 'Weather is a regional model estimate from Open-Meteo.' : 'Device readings are samples; no AERO-MIST device is connected.'} aria-label={tab === 'environment' ? 'About outdoor weather' : 'About sample data'}><CircleHelp size={19}/></button><div className="top-avatar">A</div></div></header>
     <div className="content"><div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line"/> {tab === 'environment' ? 'OUTDOOR CONDITIONS' : 'YOUR SYSTEM, AT A GLANCE'}</div><h1>{tab === 'environment' ? 'Environment' : 'AERO-MIST system'}<span>.</span></h1><p>{tab === 'environment' ? 'Weather around Las Piñas, separate from your system readings.' : 'Your misting system readings, timers and comfort.'}</p></div><div className="heading-actions"><div className="date"><Clock3 size={15}/>{date}</div>{tab === 'system' ? <button className="refresh-button" onClick={refresh}><RefreshCw size={15} className={refreshing ? 'spinning' : ''}/> Refresh data</button> : <button className="refresh-button" onClick={()=>setUnit(unit === 'C' ? 'F' : 'C')} aria-label={`Change temperature unit; currently ${unit === 'C' ? 'Celsius' : 'Fahrenheit'}`}>°{unit} <ChevronDown size={13}/></button>}</div></div>
     {tab === 'environment' ? <><div className="environment-intro"><Cloud size={18}/><span>Outdoor weather is a regional model estimate, not a reading from your AERO-MIST device.</span></div><WeatherPanel unit={unit}/></> : <>
     <div className="demo-banner"><Sparkles size={16}/><span><strong>System not connected.</strong> Readings, comfort and timers are sample data until your device is connected.</span></div>

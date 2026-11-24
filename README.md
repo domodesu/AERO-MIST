@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Run `npm run build` to create a production build. Use the settings icon at the bottom of the sidebar to choose light or dark appearance; the choice is saved in your browser.
+Run `npm run build` to create a production build. Use the settings icon at the bottom of the sidebar to choose light or dark appearance; the choice is saved in your browser. On mobile, the header stays visible while scrolling and a right swipe opens the sidebar.
 
 ### Automatic updates in GitHub Codespaces
 
