@@ -7,7 +7,7 @@ import WeatherPanel from './WeatherPanel';
 import HistoryPanel from './HistoryPanel';
 import DevicePanel from './DevicePanel';
 import SystemProfileSelector from './SystemProfileSelector';
-import { initialSystemProfile, saveSystemProfile } from './systemProfile';
+import { saveSystemProfile } from './systemProfile';
 import { pageFromHash } from './navigation';
 import { getDemoCycle, getDemoStartTime } from './demoCycle';
 import { readTheme, saveTheme, THEME_STORAGE_KEY } from './theme';
@@ -16,6 +16,7 @@ import useSampleHistory from './useSampleHistory';
 import useWeatherLocation from './useWeatherLocation';
 import { startSiteUpdateChecks } from './siteUpdates';
 import { isAndroidWebView } from './platform';
+import { getInitialAppState } from './appLaunch';
 import AppDownload from './AppDownload';
 import ContextHelp from './ContextHelp';
 
@@ -77,9 +78,17 @@ function App() {
   }, []);
   // No device service is connected yet. Replace this with verified connection state when integrated.
   const deviceConnected = false;
-  const [profile, setProfile] = useState(() => { try { return initialSystemProfile(window.localStorage, deviceConnected); } catch { return 'sample'; } });
+  const [initial] = useState(() => {
+    let localStorage = null, sessionStorage = null;
+    try { localStorage = window.localStorage; } catch {}
+    try { sessionStorage = window.sessionStorage; } catch {}
+    const state = getInitialAppState({ userAgent: navigator.userAgent, sessionStorage, localStorage, hash: window.location.hash, connected: deviceConnected });
+    if (state.resetHash) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}#environment`);
+    return state;
+  });
+  const [profile, setProfile] = useState(initial.profile);
   const [theme, setTheme] = useState(() => { try { return readTheme(window.localStorage); } catch { return 'light'; } });
-  const [tab, setTab] = useState(() => pageFromHash(window.location.hash));
+  const [tab, setTab] = useState(initial.tab);
   const [unit, setUnit] = useState('C');
   const [range, setRange] = useState('24 hours');
   const [readings, setReadings] = useState(initialReadings);
