@@ -1,14 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="29" fill="#239a79"/>
-  <!-- A soft cloud of mist, emerging from the nozzle. -->
-  <path d="M67 66c-8 0-14-5.8-14-13.1 0-6.4 4.9-11.8 11.4-12.9 1.7-9.5 9.6-16.3 19.4-16.3 8.3 0 15.6 4.9 18.8 12.3 8.4.2 15 6.7 15 14.8 0 8.4-6.8 15.2-15.5 15.2H67Z" fill="#e7fff3"/>
-  <circle cx="77.5" cy="45.5" r="3" fill="#17624c"/>
-  <circle cx="98" cy="45.5" r="3" fill="#17624c"/>
-  <path d="M79.5 54c4.2 4.8 12.2 4.8 16.3 0" fill="none" stroke="#17624c" stroke-width="3.5" stroke-linecap="round"/>
-  <!-- The spray and the nozzle make the direction of the mist clear. -->
-  <g fill="#c9f5de"><circle cx="54" cy="72" r="3.2"/><circle cx="63" cy="70" r="2.1"/><circle cx="60" cy="78" r="2"/></g>
-  <g transform="rotate(-35 36 86)" stroke="#e7fff3" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
-    <path d="M12 78h27l9 4v8l-9 4H12Z" fill="#17765b"/>
-    <path d="M48 82h7v8h-7M20 78v16M34 78v16" fill="none"/>
+  <rect width="128" height="128" rx="29" fill="#197d61"/>
+  <!-- Precision nozzle and a fine, outward fan of mist. -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 51h25l13 6v14l-13 6H20z" fill="#e4f8ed" stroke="#e4f8ed" stroke-width="4"/>
+    <path d="M28 55v18M36 55v18" stroke="#197d61" stroke-width="3.5"/>
+    <path d="M58 59h8v10h-8" stroke="#e4f8ed" stroke-width="4"/>
+    <path d="M77 57l10-5M78 64h11M77 71l10 5" stroke="#b4edce" stroke-width="3.5"/>
+  </g>
+  <g fill="#d8f8e6">
+    <circle cx="97" cy="47" r="2.5"/><circle cx="104" cy="54" r="2"/>
+    <circle cx="99" cy="64" r="2.5"/><circle cx="108" cy="64" r="1.8"/>
+    <circle cx="97" cy="81" r="2.5"/><circle cx="104" cy="74" r="2"/>
   </g>
 </svg>
