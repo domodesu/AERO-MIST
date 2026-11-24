@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Activity, ArrowDownRight, ArrowRight, BatteryMedium, Check, ChevronDown, CircleHelp, Clock3, Cloud, Droplets, Gauge, LayoutDashboard, Leaf, Menu, Radio, RefreshCw, Settings2, Sparkles, Thermometer, Timer, Wind, X, Zap } from 'lucide-react';
+import { Activity, ArrowDownRight, ArrowRight, BatteryMedium, Check, ChevronDown, CircleHelp, Clock3, Cloud, Droplets, Gauge, LayoutDashboard, Leaf, Menu, Moon, Radio, RefreshCw, Settings2, Sparkles, Sun, Thermometer, Timer, Wind, X, Zap } from 'lucide-react';
 import './styles.css';
 import WeatherPanel from './WeatherPanel';
 import { getDemoCycle, getDemoStartTime } from './demoCycle';
+import { readTheme, saveTheme, THEME_STORAGE_KEY } from './theme';
 
 const initialReadings = { temperature: 28.4, humidity: 64, heatIndex: 31.2, battery: 78 };
 const ranges = ['24 hours', '7 days', '30 days'];
@@ -13,7 +14,20 @@ const formatTimer = seconds => `${String(Math.floor(Math.max(0, seconds) / 60)).
 function Brand() {
   return <div className="brand"><div className="brand-icon"><Wind size={23} strokeWidth={2.3} /></div><div><div className="brand-name">AERO<span>-</span>MIST</div><div className="brand-caption">SMART COOLING SYSTEM</div></div></div>;
 }
-function Sidebar({ open, onClose, tab }) {
+function Sidebar({ open, onClose, tab, theme, setTheme }) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef(null);
+  const settingsButtonRef = useRef(null);
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const closeOutside = event => { if (!settingsRef.current?.contains(event.target)) setSettingsOpen(false); };
+    const closeOnEscape = event => {
+      if (event.key === 'Escape') { setSettingsOpen(false); settingsButtonRef.current?.focus(); }
+    };
+    document.addEventListener('pointerdown', closeOutside);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => { document.removeEventListener('pointerdown', closeOutside); document.removeEventListener('keydown', closeOnEscape); };
+  }, [settingsOpen]);
   return <><div className={`sidebar-overlay ${open ? 'show' : ''}`} onClick={onClose} /> <aside className={`sidebar ${open ? 'open' : ''}`}>
     <div className="sidebar-top"><Brand /><button className="close-menu icon-button" onClick={onClose} aria-label="Close menu"><X size={19}/></button></div>
     <div className="nav-label">WORKSPACE</div>
@@ -21,7 +35,10 @@ function Sidebar({ open, onClose, tab }) {
     <a className={`nav-item ${tab === 'system' ? 'active' : ''}`} href="#system" onClick={onClose} aria-current={tab === 'system' ? 'page' : undefined}><LayoutDashboard size={18}/><span>AERO-MIST system</span>{tab === 'system' && <span className="active-dot" />}</a>
     <div className="sidebar-bottom">
       <div className="sidebar-note"><div className="note-icon"><Leaf size={17}/></div><strong>A little cooler, naturally.</strong><p>A better environment starts with a little mist.</p><div className="note-decoration"><Wind size={70}/></div></div>
-      <div className="sidebar-foot"><div className="foot-avatar">A</div><div><strong>AERO-MIST</strong><span>Environment monitor</span></div><Settings2 size={16}/></div>
+      <div className="sidebar-foot"><div className="foot-avatar">A</div><div><strong>AERO-MIST</strong><span>Environment monitor</span></div><div className="theme-settings" ref={settingsRef}>
+        <button ref={settingsButtonRef} className="theme-settings-button" type="button" onClick={() => setSettingsOpen(value => !value)} aria-label="Display settings" aria-expanded={settingsOpen} aria-controls="appearance-options"><Settings2 size={18}/></button>
+        {settingsOpen && <div className="theme-menu" id="appearance-options" role="group" aria-label="Appearance"><div className="theme-menu-heading">Display appearance</div><p>Choose how AERO-MIST looks.</p><div className="theme-choices"><button type="button" aria-pressed={theme === 'light'} onClick={() => setTheme('light')}><Sun size={16}/> Light {theme === 'light' && <Check size={15}/>}</button><button type="button" aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}><Moon size={16}/> Dark {theme === 'dark' && <Check size={15}/>}</button></div></div>}
+      </div></div>
     </div>
   </aside></>;
 }
@@ -38,6 +55,7 @@ function TrendChart({ range, unit }) {
   return <div className="chart-wrap"><div className="chart-y"><span>{convert(32)}</span><span>{convert(30)}</span><span>{convert(28)}</span><span>{convert(26)}</span></div><div className="chart-main"><svg className="chart" viewBox="0 0 600 145" preserveAspectRatio="none" role="img" aria-label={`Sample temperature trend over ${range}`}><defs><linearGradient id="fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#68c8ae" stopOpacity=".3"/><stop offset="100%" stopColor="#68c8ae" stopOpacity=".015"/></linearGradient></defs>{[0,48,96,144].map(y=><line key={y} x1="0" x2="600" y1={y} y2={y} stroke="#edf1ee" strokeDasharray="4 5"/>)}<path d={area} fill="url(#fill)"/><path d={line} fill="none" stroke="#27a786" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/><circle cx="600" cy={points[12][1]} r="5" fill="#27a786" stroke="white" strokeWidth="3" vectorEffect="non-scaling-stroke"/></svg><div className="chart-labels">{labels.map(l=><span key={l}>{l}</span>)}</div></div></div>;
 }
 function App() {
+  const [theme, setTheme] = useState(() => { try { return readTheme(window.localStorage); } catch { return 'light'; } });
   const [tab, setTab] = useState(() => window.location.hash === '#environment' ? 'environment' : 'system');
   const [unit, setUnit] = useState('C');
   const [range, setRange] = useState('24 hours');
@@ -50,6 +68,15 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { saveTheme(window.localStorage, theme); } catch {}
+  }, [theme]);
+  useEffect(() => {
+    const onStorage = event => { if (event.key === THEME_STORAGE_KEY) setTheme(event.newValue === 'dark' ? 'dark' : 'light'); };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+  useEffect(() => {
     const onHashChange = () => setTab(window.location.hash === '#environment' ? 'environment' : 'system');
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
@@ -58,7 +85,7 @@ function App() {
   const temperature = n => unit === 'C' ? n.toFixed(1) : (n * 9 / 5 + 32).toFixed(1);
   const date = useMemo(() => new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }), []);
   function refresh() { setRefreshing(true); setReadings(initialReadings); setUpdated(new Date()); setTimeout(() => setRefreshing(false), 500); }
-  return <div className="app-shell"><Sidebar open={menuOpen} onClose={()=>setMenuOpen(false)} tab={tab}/><main className="main" id="overview">
+  return <div className="app-shell"><Sidebar open={menuOpen} onClose={()=>setMenuOpen(false)} tab={tab} theme={theme} setTheme={setTheme}/><main className="main" id="overview">
     <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-button" onClick={()=>setMenuOpen(true)} aria-label="Open menu"><Menu size={21}/></button><span className="breadcrumb-muted">Workspace</span><span className="breadcrumb-slash">/</span><strong>{tab === 'environment' ? 'Environment' : 'AERO-MIST system'}</strong></div><div className="topbar-right"><span className="demo-pill"><span/> {tab === 'environment' ? 'Outdoor estimates' : 'Sample data'}</span><button className="help-button" title={tab === 'environment' ? 'Weather is a regional model estimate from Open-Meteo.' : 'Device readings are samples; no AERO-MIST device is connected.'} aria-label={tab === 'environment' ? 'About outdoor weather' : 'About sample data'}><CircleHelp size={19}/></button><div className="top-avatar">A</div></div></header>
     <div className="content"><div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line"/> {tab === 'environment' ? 'OUTDOOR CONDITIONS' : 'YOUR SYSTEM, AT A GLANCE'}</div><h1>{tab === 'environment' ? 'Environment' : 'AERO-MIST system'}<span>.</span></h1><p>{tab === 'environment' ? 'Weather around Las Piñas, separate from your system readings.' : 'Your misting system readings, timers and comfort.'}</p></div><div className="heading-actions"><div className="date"><Clock3 size={15}/>{date}</div>{tab === 'system' ? <button className="refresh-button" onClick={refresh}><RefreshCw size={15} className={refreshing ? 'spinning' : ''}/> Refresh data</button> : <button className="refresh-button" onClick={()=>setUnit(unit === 'C' ? 'F' : 'C')} aria-label={`Change temperature unit; currently ${unit === 'C' ? 'Celsius' : 'Fahrenheit'}`}>°{unit} <ChevronDown size={13}/></button>}</div></div>
     {tab === 'environment' ? <><div className="environment-intro"><Cloud size={18}/><span>Outdoor weather is a regional model estimate, not a reading from your AERO-MIST device.</span></div><WeatherPanel unit={unit}/></> : <>
