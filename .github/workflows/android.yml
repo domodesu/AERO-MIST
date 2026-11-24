@@ -5,7 +5,10 @@ on:
     paths: ['android/**', '.github/workflows/android.yml']
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
+concurrency:
+  group: android-test-release
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,3 +37,13 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+      - name: Publish public test APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk AERO-MIST-test.apk
+          if gh release view android-test > /dev/null 2>&1; then
+            gh release upload android-test AERO-MIST-test.apk --clobber
+          else
+            gh release create android-test AERO-MIST-test.apk --target "$GITHUB_SHA" --title "AERO-MIST Android test" --notes "Online test APK; requires internet. This is a debug-signed test build and has not been tested on every Android device. Future test APKs may require uninstalling this version and may erase app-local data. Bluetooth and ESP32 controls are not implemented." --prerelease
+          fi
