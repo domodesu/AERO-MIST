@@ -1,6 +1,6 @@
 # AERO-MIST control requirements (draft)
 
-These are the project team's stated requirements for the future ESP32 system. **They are not implemented in firmware or connected to the dashboard.** The website still displays demo device readings and browser-local demo timers. Do not use this document as a tested operating or safety procedure.
+These are the project team's stated requirements for the future ESP32 system. **They are not implemented in firmware or connected to the dashboard.** The website still displays sample device readings and browser-local sample timers. Do not use this document as a tested operating or safety procedure.
 
 ## Temperature and humidity
 
