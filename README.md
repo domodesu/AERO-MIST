@@ -17,6 +17,8 @@ While `npm run dev` is running in a Codespace, the app checks the current branch
 
 The Codespace must be running and connected, and the branch must track a remote branch. To disable automatic updates, run `AERO_AUTO_UPDATE=0 npm run dev`. Outside Codespaces, `npm run dev` does not automatically change Git files.
 
+The team’s draft temperature, humidity, and misting requirements are recorded in [docs/control-requirements.md](docs/control-requirements.md). They are not yet implemented or connected to the physical system.
+
 ## Data
 
 The Local weather panel requests modelled outdoor temperature, relative humidity, and apparent temperature for Las Piñas (14.444546, 120.993874) from [Open-Meteo](https://open-meteo.com/). It refreshes on load, every 15 minutes while the page is open, and on request. The model time is shown in Manila time. These are weather model estimates, not AERO-MIST sensor measurements; apparent temperature is not heat index. They may differ from conditions at the device. Weather data is provided by Open-Meteo under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Its free API is for non-commercial use; check the provider's terms for other use.
