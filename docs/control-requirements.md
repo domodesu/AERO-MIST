@@ -18,11 +18,11 @@ Each cycle is five minutes long. Choose the pattern based on RH:
 | Above 70% to 80% inclusive | 5 seconds | 15 seconds |
 | Above 80% | Locked out | Locked out |
 
-When a five-minute cycle finishes, wait before another cycle even if cooling is still needed and there is no humidity lockout. The waiting period and conditions for starting the next cycle have not yet been specified. This wait is separate from the off periods within each misting pattern.
+After a five-minute misting cycle, wait through a **five-minute cooldown** before another cycle, for every humidity condition. This cooldown is separate from the 15- or 20-second off periods within each misting pattern. The conditions for starting the next cycle have not yet been specified, and the humidity lockout still takes priority.
 
 ## Questions to settle before implementing
 
-- How long should the system wait between five-minute cycles, and under what conditions should the next cycle start?
+- After the five-minute cooldown, under what conditions should the next cycle start automatically?
 - If humidity lockout clears while temperature is between 38°C and 40°C, should cooling resume immediately if it was active before lockout, or wait for temperature to reach 40°C again?
 - How should an in-progress mist pulse respond if RH moves from one pattern range to the other?
 - Which temperature and humidity sensors, pump/valve and power setup will be used, and how will the ESP32 connect to the internet?
