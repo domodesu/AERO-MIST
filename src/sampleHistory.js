@@ -21,6 +21,11 @@ export function writeSampleHistory(storage, records) {
   if (storage.getItem(SAMPLE_HISTORY_KEY) !== serialized) storage.setItem(SAMPLE_HISTORY_KEY, serialized);
 }
 
+// Earlier snapshots predate location tagging and used Las Piñas coordinates.
+export function sampleLocation(record) {
+  return typeof record?.location === 'string' && record.location ? record.location : 'Las Piñas';
+}
+
 export function compareTemperatures(system, outside, unit = 'C') {
   if (!Number.isFinite(system) || !Number.isFinite(outside)) return null;
   return (system - outside) * (unit === 'F' ? 9 / 5 : 1);

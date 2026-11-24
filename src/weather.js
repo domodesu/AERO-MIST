@@ -1,5 +1,6 @@
-// Las Piñas city centre. Open-Meteo returns modelled weather, not device sensor readings.
-export const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=14.444546&longitude=120.993874&current=temperature_2m,relative_humidity_2m,apparent_temperature&timezone=Asia%2FManila&forecast_days=1';
+// Manila city centre. Open-Meteo returns modelled weather, not device sensor readings.
+export const WEATHER_LOCATION = 'Manila';
+export const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=14.5995124&longitude=120.9842195&current=temperature_2m,relative_humidity_2m,apparent_temperature&timezone=Asia%2FManila&forecast_days=1';
 
 export function parseWeather(data) {
   const current = data?.current;

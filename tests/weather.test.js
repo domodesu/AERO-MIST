@@ -4,10 +4,10 @@ import { parseWeather, WEATHER_URL } from '../src/weather.js';
 
 const response = { current: { time: '2026-11-25T01:00', temperature_2m: 27.7, relative_humidity_2m: 80, apparent_temperature: 31.8 } };
 
-test('requests Las Piñas weather with Manila timezone', () => {
+test('requests Manila weather with Manila timezone', () => {
   const url = new URL(WEATHER_URL);
-  assert.equal(url.searchParams.get('latitude'), '14.444546');
-  assert.equal(url.searchParams.get('longitude'), '120.993874');
+  assert.equal(url.searchParams.get('latitude'), '14.5995124');
+  assert.equal(url.searchParams.get('longitude'), '120.9842195');
   assert.equal(url.searchParams.get('timezone'), 'Asia/Manila');
 });
 

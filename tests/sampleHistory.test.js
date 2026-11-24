@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SAMPLE_HISTORY_KEY, SAMPLE_RETENTION_MS, pruneSampleHistory, parseSampleHistory, writeSampleHistory, compareTemperatures, compareHumidity, formatDifference } from '../src/sampleHistory.js';
+import { SAMPLE_HISTORY_KEY, SAMPLE_RETENTION_MS, pruneSampleHistory, parseSampleHistory, writeSampleHistory, sampleLocation, compareTemperatures, compareHumidity, formatDifference } from '../src/sampleHistory.js';
 
 const sample = { id: 'sample-1', recordedAt: 10000000, temperature: 28.4, humidity: 64, phase: 'misting', outdoor: null };
 
@@ -33,4 +33,9 @@ test('pruning sample snapshots never touches actual-system history', () => {
   writeSampleHistory(storage, pruneSampleHistory([sample], sample.recordedAt + SAMPLE_RETENTION_MS));
   assert.equal(values.get(SAMPLE_HISTORY_KEY), '[]');
   assert.equal(values.get('aero-mist-actual-history'), JSON.stringify([{ id: 'real-entry' }]));
+});
+
+test('preserves the location of older sample snapshots', () => {
+  assert.equal(sampleLocation(sample), 'Las Piñas');
+  assert.equal(sampleLocation({ ...sample, location: 'Manila' }), 'Manila');
 });

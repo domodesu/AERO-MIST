@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getDemoCycle } from './demoCycle';
-import { parseWeather, WEATHER_URL } from './weather';
-import { parseSampleHistory, pruneSampleHistory, writeSampleHistory, SAMPLE_HISTORY_KEY, SAMPLE_INTERVAL_MS, SAMPLE_RETENTION_MS } from './sampleHistory';
+import { parseWeather, WEATHER_LOCATION, WEATHER_URL } from './weather';
+import { parseSampleHistory, pruneSampleHistory, writeSampleHistory, sampleLocation, SAMPLE_HISTORY_KEY, SAMPLE_INTERVAL_MS, SAMPLE_RETENTION_MS } from './sampleHistory';
 
 function storage() {
   try { return window.localStorage; } catch { return null; }
@@ -62,9 +62,9 @@ export default function useSampleHistory(active, readings, cycleStart) {
       if (document.visibilityState === 'hidden') return;
       const now = Date.now();
       const existing = load(current.current, memoryOnly.current);
-      if (existing.some(record => now - record.recordedAt < SAMPLE_INTERVAL_MS)) return;
+      if (existing.some(record => sampleLocation(record) === WEATHER_LOCATION && now - record.recordedAt < SAMPLE_INTERVAL_MS)) return;
       const id = `${now}-${Math.random().toString(36).slice(2)}`;
-      const record = { id, recordedAt: now, temperature: readings.temperature, humidity: readings.humidity, phase: getDemoCycle(cycleStart, now).phase, outdoor: null };
+      const record = { id, recordedAt: now, location: WEATHER_LOCATION, temperature: readings.temperature, humidity: readings.humidity, phase: getDemoCycle(cycleStart, now).phase, outdoor: null };
       commit([record, ...existing]);
       const controller = new AbortController();
       request.current = controller;
