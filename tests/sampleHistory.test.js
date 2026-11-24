@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SAMPLE_HISTORY_KEY, SAMPLE_RETENTION_MS, pruneSampleHistory, parseSampleHistory, writeSampleHistory, sampleLocation, shouldCaptureSample, compareTemperatures, compareHumidity, formatDifference } from '../src/sampleHistory.js';
+import { SAMPLE_HISTORY_KEY, SAMPLE_RETENTION_MS, pruneSampleHistory, parseSampleHistory, writeSampleHistory, sampleLocation, sampleLocationKey, shouldCaptureSample, compareTemperatures, compareHumidity, formatDifference } from '../src/sampleHistory.js';
 
 const sample = { id: 'sample-1', recordedAt: 10000000, temperature: 28.4, humidity: 64, phase: 'misting', outdoor: null };
 
@@ -45,4 +45,12 @@ test('starts a new snapshot when the weather location changes', () => {
   assert.equal(shouldCaptureSample([manila], 'Las Piñas', sample.recordedAt + 1000), true);
   assert.equal(shouldCaptureSample([sample], 'Las Piñas', sample.recordedAt + 1000), false);
   assert.equal(shouldCaptureSample([sample], 'Las Piñas', sample.recordedAt + 15 * 60000), true);
+});
+
+test('keeps current-location snapshots separate without storing coordinates', () => {
+  const current = { ...sample, location: 'Current location', locationKey: 'current-session-a' };
+  assert.equal(sampleLocation(current), 'Current location');
+  assert.equal(sampleLocationKey(current), 'current-session-a');
+  assert.equal(shouldCaptureSample([current], 'current-session-a', sample.recordedAt + 1000), false);
+  assert.equal(shouldCaptureSample([current], 'current-session-b', sample.recordedAt + 1000), true);
 });

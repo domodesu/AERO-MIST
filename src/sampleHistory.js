@@ -26,9 +26,13 @@ export function sampleLocation(record) {
   return typeof record?.location === 'string' && record.location ? record.location : 'Las Piñas';
 }
 
+export function sampleLocationKey(record) {
+  return typeof record?.locationKey === 'string' && record.locationKey ? record.locationKey : sampleLocation(record);
+}
+
 export function shouldCaptureSample(records, location, now = Date.now()) {
   const last = records[0];
-  return !last || sampleLocation(last) !== location || now - last.recordedAt >= SAMPLE_INTERVAL_MS;
+  return !last || sampleLocationKey(last) !== location || now - last.recordedAt >= SAMPLE_INTERVAL_MS;
 }
 
 export function compareTemperatures(system, outside, unit = 'C') {

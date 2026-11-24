@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getDemoCycle } from './demoCycle';
-import { parseWeather, WEATHER_LOCATION, WEATHER_URL } from './weather';
+import { createWeatherUrl, parseWeather } from './weather';
 import { parseSampleHistory, pruneSampleHistory, writeSampleHistory, shouldCaptureSample, SAMPLE_HISTORY_KEY, SAMPLE_RETENTION_MS } from './sampleHistory';
 
 function storage() {
@@ -13,7 +13,7 @@ function load(fallback, memoryOnly = false) {
 }
 
 // Sample snapshots stay local to this browser; actual device history is never read or modified here.
-export default function useSampleHistory(active, readings, cycleStart) {
+export default function useSampleHistory(active, readings, cycleStart, location) {
   const [records, setRecords] = useState(() => load([]));
   const current = useRef(records);
   const memoryOnly = useRef(false);
@@ -62,21 +62,22 @@ export default function useSampleHistory(active, readings, cycleStart) {
       if (document.visibilityState === 'hidden') return;
       const now = Date.now();
       const existing = load(current.current, memoryOnly.current);
-      if (!shouldCaptureSample(existing, WEATHER_LOCATION, now)) return;
+      if (!shouldCaptureSample(existing, location.key, now)) return;
       const id = `${now}-${Math.random().toString(36).slice(2)}`;
-      const record = { id, recordedAt: now, location: WEATHER_LOCATION, temperature: readings.temperature, humidity: readings.humidity, phase: getDemoCycle(cycleStart, now).phase, outdoor: null };
+      const record = { id, recordedAt: now, location: location.name, locationKey: location.key, temperature: readings.temperature, humidity: readings.humidity, phase: getDemoCycle(cycleStart, now).phase, outdoor: null };
       commit([record, ...existing]);
+      request.current?.abort();
       const controller = new AbortController();
       request.current = controller;
       const timeout = setTimeout(() => controller.abort(), 15000);
       try {
-        const response = await fetch(WEATHER_URL, { signal: controller.signal });
+        const response = await fetch(createWeatherUrl(location), { signal: controller.signal });
         if (!response.ok) throw new Error('Weather unavailable');
         const weather = parseWeather(await response.json());
         if (mounted.current && !controller.signal.aborted) {
           const latest = load(current.current, memoryOnly.current);
           if (latest.some(item => item.id === id)) {
-            commit(latest.map(item => item.id === id ? { ...item, outdoor: { temperature: weather.temperature, humidity: weather.humidity, time: weather.time.getTime() } } : item));
+            commit(latest.map(item => item.id === id ? { ...item, outdoor: { temperature: weather.temperature, humidity: weather.humidity, time: weather.time.getTime(), timeZone: weather.timeZone } } : item));
           }
         }
       } catch { /* Leave outdoor comparison unavailable instead of inventing data. */ }
@@ -87,6 +88,6 @@ export default function useSampleHistory(active, readings, cycleStart) {
     const onVisible = () => { if (document.visibilityState === 'visible') captureIfDue(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVisible); };
-  }, [active, readings.temperature, readings.humidity, cycleStart, commit]);
+  }, [active, readings.temperature, readings.humidity, cycleStart, commit, location]);
   return records;
 }
