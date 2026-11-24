@@ -14,6 +14,7 @@ import { readTheme, saveTheme, THEME_STORAGE_KEY } from './theme';
 import { isMenuOpenSwipe } from './swipe';
 import useSampleHistory from './useSampleHistory';
 import useWeatherLocation from './useWeatherLocation';
+import { startSiteUpdateChecks } from './siteUpdates';
 
 const initialReadings = { temperature: 28.4, humidity: 64, heatIndex: 31.2, battery: 78 };
 const ranges = ['24 hours', '7 days', '30 days'];
@@ -65,6 +66,12 @@ function TrendChart({ range, unit }) {
   return <div className="chart-wrap"><div className="chart-y"><span>{convert(32)}</span><span>{convert(30)}</span><span>{convert(28)}</span><span>{convert(26)}</span></div><div className="chart-main"><svg className="chart" viewBox="0 0 600 145" preserveAspectRatio="none" role="img" aria-label={`Sample temperature trend over ${range}`}><defs><linearGradient id="fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#68c8ae" stopOpacity=".3"/><stop offset="100%" stopColor="#68c8ae" stopOpacity=".015"/></linearGradient></defs>{[0,48,96,144].map(y=><line key={y} x1="0" x2="600" y1={y} y2={y} stroke="#edf1ee" strokeDasharray="4 5"/>)}<path d={area} fill="url(#fill)"/><path d={line} fill="none" stroke="#27a786" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/><circle cx="600" cy={points[12][1]} r="5" fill="#27a786" stroke="white" strokeWidth="3" vectorEffect="non-scaling-stroke"/></svg><div className="chart-labels">{labels.map(l=><span key={l}>{l}</span>)}</div></div></div>;
 }
 function App() {
+  useEffect(() => {
+    if (!import.meta.env.PROD) return;
+    let storage = null;
+    try { storage = window.sessionStorage; } catch {}
+    return startSiteUpdateChecks({ current: __APP_BUILD_ID__, base: import.meta.env.BASE_URL, fetcher: window.fetch.bind(window), location: window.location, storage, document, window });
+  }, []);
   // No device service is connected yet. Replace this with verified connection state when integrated.
   const deviceConnected = false;
   const [profile, setProfile] = useState(() => { try { return initialSystemProfile(window.localStorage, deviceConnected); } catch { return 'sample'; } });
