@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="29" fill="#197d61"/>
+  <!-- Precision nozzle and a fine, outward fan of mist. -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 51h25l13 6v14l-13 6H20z" fill="#e4f8ed" stroke="#e4f8ed" stroke-width="4"/>
+    <path d="M28 55v18M36 55v18" stroke="#197d61" stroke-width="3.5"/>
+    <path d="M58 59h8v10h-8" stroke="#e4f8ed" stroke-width="4"/>
+    <path d="M77 57l10-5M78 64h11M77 71l10 5" stroke="#b4edce" stroke-width="3.5"/>
+  </g>
+  <g fill="#d8f8e6">
+    <circle cx="97" cy="47" r="2.5"/><circle cx="104" cy="54" r="2"/>
+    <circle cx="99" cy="64" r="2.5"/><circle cx="108" cy="64" r="1.8"/>
+    <circle cx="97" cy="81" r="2.5"/><circle cx="104" cy="74" r="2"/>
+  </g>
+</svg>

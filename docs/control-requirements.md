@@ -22,6 +22,8 @@ After a five-minute misting cycle, wait through a **five-minute cooldown** befor
 
 ## Questions to settle before implementing
 
+- The team also noted that rainy or cloudy conditions can bring high humidity and may cancel operation for the day. Clarify whether this means a whole-day cancellation or the existing above-80% lockout that clears at 75% or below, which humidity reading is authoritative, and whether rain/cloud cover alone should prevent operation. Outdoor model estimates are not an on-site sensor.
+
 - After the five-minute cooldown, under what conditions should the next cycle start automatically?
 - If humidity lockout clears while temperature is between 38°C and 40°C, should cooling resume immediately if it was active before lockout, or wait for temperature to reach 40°C again?
 - How should an in-progress mist pulse respond if RH moves from one pattern range to the other?

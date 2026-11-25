@@ -1,0 +1,49 @@
+name: Build Android test APK
+on:
+  push:
+    branches: [arena/658f6c29-aero-mist]
+    paths: ['android/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: android-test-release
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK components
+        shell: bash
+        run: |
+          echo "::warning::ANDROID_HOME=${ANDROID_HOME:-unset}; ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-unset}"
+          SDKMANAGER="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then echo "::error::Android SDK command-line tools not found at $SDKMANAGER"; exit 1; fi
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - run: gradle --no-daemon assembleDebug
+        working-directory: android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AERO-MIST-test-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish public test APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk AERO-MIST-test.apk
+          if gh release view android-test > /dev/null 2>&1; then
+            gh release upload android-test AERO-MIST-test.apk --clobber
+          else
+            gh release create android-test AERO-MIST-test.apk --target "$GITHUB_SHA" --title "AERO-MIST Android test" --notes "Online test APK; requires internet. This is a debug-signed test build and has not been tested on every Android device. Future test APKs may require uninstalling this version and may erase app-local data. Bluetooth and ESP32 controls are not implemented." --prerelease
+          fi

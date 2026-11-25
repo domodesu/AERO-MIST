@@ -1,16 +1,24 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Activity, ArrowDownRight, ArrowRight, BatteryMedium, Check, ChevronDown, CircleHelp, Clock3, Cloud, Droplets, Gauge, History, LayoutDashboard, Leaf, Menu, Moon, Radio, RefreshCw, Settings2, Sparkles, Sun, Thermometer, Timer, Wind, X, Zap } from 'lucide-react';
+import { Activity, ArrowDownRight, ArrowRight, BatteryMedium, Check, ChevronDown, Clock3, Cloud, Droplets, Gauge, History, LayoutDashboard, Leaf, Menu, Moon, Radio, RefreshCw, Settings2, Sparkles, Sun, Thermometer, Timer, Wind, X, Zap } from 'lucide-react';
 import './styles.css';
+import logoUrl from './assets/aero-mist-logo.svg';
 import WeatherPanel from './WeatherPanel';
 import HistoryPanel from './HistoryPanel';
 import DevicePanel from './DevicePanel';
 import SystemProfileSelector from './SystemProfileSelector';
-import { initialSystemProfile, saveSystemProfile } from './systemProfile';
+import { saveSystemProfile } from './systemProfile';
 import { pageFromHash } from './navigation';
 import { getDemoCycle, getDemoStartTime } from './demoCycle';
 import { readTheme, saveTheme, THEME_STORAGE_KEY } from './theme';
 import { isMenuOpenSwipe } from './swipe';
+import useSampleHistory from './useSampleHistory';
+import useWeatherLocation from './useWeatherLocation';
+import { startSiteUpdateChecks } from './siteUpdates';
+import { isAndroidWebView } from './platform';
+import { getInitialAppState } from './appLaunch';
+import AppDownload from './AppDownload';
+import ContextHelp from './ContextHelp';
 
 const initialReadings = { temperature: 28.4, humidity: 64, heatIndex: 31.2, battery: 78 };
 const ranges = ['24 hours', '7 days', '30 days'];
@@ -18,7 +26,7 @@ const formatTime = date => date.toLocaleTimeString([], { hour: 'numeric', minute
 const formatTimer = seconds => `${String(Math.floor(Math.max(0, seconds) / 60)).padStart(2, '0')}:${String(Math.max(0, seconds) % 60).padStart(2, '0')}`;
 
 function Brand() {
-  return <div className="brand"><div className="brand-icon"><Wind size={23} strokeWidth={2.3} /></div><div><div className="brand-name">AERO<span>-</span>MIST</div><div className="brand-caption">SMART COOLING SYSTEM</div></div></div>;
+  return <div className="brand"><div className="brand-icon"><img src={logoUrl} alt="" /></div><div><div className="brand-name">AERO<span>-</span>MIST</div><div className="brand-caption">SMART COOLING SYSTEM</div></div></div>;
 }
 function Sidebar({ open, onClose, tab, theme, setTheme }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -38,7 +46,7 @@ function Sidebar({ open, onClose, tab, theme, setTheme }) {
     <div className="sidebar-top"><Brand /><button className="close-menu icon-button" onClick={onClose} aria-label="Close menu"><X size={19}/></button></div>
     <div className="nav-label">WORKSPACE</div>
     <a className={`nav-item ${tab === 'environment' ? 'active' : ''}`} href="#environment" onClick={onClose} aria-current={tab === 'environment' ? 'page' : undefined}><Cloud size={18}/><span>Environment</span>{tab === 'environment' && <span className="active-dot" />}</a>
-    <a className={`nav-item ${tab === 'system' ? 'active' : ''}`} href="#system" onClick={onClose} aria-current={tab === 'system' ? 'page' : undefined}><LayoutDashboard size={18}/><span>AERO-MIST system</span>{tab === 'system' && <span className="active-dot" />}</a>
+    <a className={`nav-item ${tab === 'system' ? 'active' : ''}`} href="#system" onClick={onClose} aria-current={tab === 'system' ? 'page' : undefined}><LayoutDashboard size={18}/><span>AERO-MIST</span>{tab === 'system' && <span className="active-dot" />}</a>
     <a className={`nav-item ${tab === 'history' ? 'active' : ''}`} href="#history" onClick={onClose} aria-current={tab === 'history' ? 'page' : undefined}><History size={18}/><span>History</span>{tab === 'history' && <span className="active-dot" />}</a>
     <div className="sidebar-bottom">
       <div className="sidebar-note"><div className="note-icon"><Leaf size={17}/></div><strong>A little cooler, naturally.</strong><p>A better environment starts with a little mist.</p><div className="note-decoration"><Wind size={70}/></div></div>
@@ -62,11 +70,25 @@ function TrendChart({ range, unit }) {
   return <div className="chart-wrap"><div className="chart-y"><span>{convert(32)}</span><span>{convert(30)}</span><span>{convert(28)}</span><span>{convert(26)}</span></div><div className="chart-main"><svg className="chart" viewBox="0 0 600 145" preserveAspectRatio="none" role="img" aria-label={`Sample temperature trend over ${range}`}><defs><linearGradient id="fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#68c8ae" stopOpacity=".3"/><stop offset="100%" stopColor="#68c8ae" stopOpacity=".015"/></linearGradient></defs>{[0,48,96,144].map(y=><line key={y} x1="0" x2="600" y1={y} y2={y} stroke="#edf1ee" strokeDasharray="4 5"/>)}<path d={area} fill="url(#fill)"/><path d={line} fill="none" stroke="#27a786" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/><circle cx="600" cy={points[12][1]} r="5" fill="#27a786" stroke="white" strokeWidth="3" vectorEffect="non-scaling-stroke"/></svg><div className="chart-labels">{labels.map(l=><span key={l}>{l}</span>)}</div></div></div>;
 }
 function App() {
+  useEffect(() => {
+    if (!import.meta.env.PROD) return;
+    let storage = null;
+    try { storage = window.sessionStorage; } catch {}
+    return startSiteUpdateChecks({ current: __APP_BUILD_ID__, base: import.meta.env.BASE_URL, fetcher: window.fetch.bind(window), location: window.location, storage, document, window });
+  }, []);
   // No device service is connected yet. Replace this with verified connection state when integrated.
   const deviceConnected = false;
-  const [profile, setProfile] = useState(() => { try { return initialSystemProfile(window.localStorage, deviceConnected); } catch { return 'sample'; } });
+  const [initial] = useState(() => {
+    let localStorage = null, sessionStorage = null;
+    try { localStorage = window.localStorage; } catch {}
+    try { sessionStorage = window.sessionStorage; } catch {}
+    const state = getInitialAppState({ userAgent: navigator.userAgent, sessionStorage, localStorage, hash: window.location.hash, connected: deviceConnected });
+    if (state.resetHash) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}#environment`);
+    return state;
+  });
+  const [profile, setProfile] = useState(initial.profile);
   const [theme, setTheme] = useState(() => { try { return readTheme(window.localStorage); } catch { return 'light'; } });
-  const [tab, setTab] = useState(() => pageFromHash(window.location.hash));
+  const [tab, setTab] = useState(initial.tab);
   const [unit, setUnit] = useState('C');
   const [range, setRange] = useState('24 hours');
   const [readings, setReadings] = useState(initialReadings);
@@ -77,6 +99,8 @@ function App() {
   const [cycle, setCycle] = useState(() => getDemoCycle(cycleStart));
   const [menuOpen, setMenuOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const locationControl = useWeatherLocation();
+  const sampleHistory = useSampleHistory(profile === 'sample', readings, cycleStart, locationControl.location);
   useEffect(() => {
     if (deviceConnected) setProfile('device');
   }, [deviceConnected]);
@@ -123,16 +147,16 @@ function App() {
     };
   }, [menuOpen]);
   useEffect(() => { const id = setInterval(() => setCycle(getDemoCycle(cycleStart)), 1000); return () => clearInterval(id); }, [cycleStart]);
-  const pageTitle = tab === 'environment' ? 'Environment' : tab === 'history' ? 'History' : 'AERO-MIST system';
+  const pageTitle = tab === 'environment' ? 'Environment' : tab === 'history' ? 'History' : 'AERO-MIST';
   const temperature = n => unit === 'C' ? n.toFixed(1) : (n * 9 / 5 + 32).toFixed(1);
   const date = useMemo(() => new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }), []);
   function refresh() { setRefreshing(true); setReadings(initialReadings); setUpdated(new Date()); setTimeout(() => setRefreshing(false), 500); }
   return <div className="app-shell"><Sidebar open={menuOpen} onClose={()=>setMenuOpen(false)} tab={tab} theme={theme} setTheme={setTheme}/><main className="main" id="overview">
-    <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-button" onClick={()=>setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen} aria-controls="sidebar-navigation"><Menu size={21}/></button><span className="breadcrumb-muted">Workspace</span><span className="breadcrumb-slash">/</span><strong>{pageTitle}</strong></div><div className="topbar-right">{tab === 'system' ? <SystemProfileSelector profile={profile} onChange={setProfile}/> : <span className="demo-pill"><span/> {tab === 'environment' ? 'Outdoor estimates' : 'Not connected'}</span>}<button className="help-button" title={tab === 'environment' ? 'Weather is a regional model estimate from Open-Meteo.' : tab === 'history' ? 'System history requires a connected device and storage.' : profile === 'device' ? 'AERO-MIST device is not connected; actual readings are unavailable.' : 'Device readings are samples; no AERO-MIST device is connected.'} aria-label={tab === 'environment' ? 'About outdoor weather' : tab === 'history' ? 'About system history' : profile === 'device' ? 'About device connection' : 'About sample data'}><CircleHelp size={19}/></button><div className="top-avatar">A</div></div></header>
-    <div className="content"><div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line"/> {tab === 'environment' ? 'OUTDOOR CONDITIONS' : tab === 'history' ? 'YOUR SYSTEM, OVER TIME' : 'YOUR SYSTEM, AT A GLANCE'}</div><h1>{pageTitle}<span>.</span></h1><p>{tab === 'environment' ? 'Weather around Las Piñas, separate from your system readings.' : tab === 'history' ? 'A place for your past system activity and readings.' : 'Your misting system readings, timers and comfort.'}</p></div><div className="heading-actions"><div className="date"><Clock3 size={15}/>{date}</div>{tab === 'system' && profile === 'sample' ? <button className="refresh-button" onClick={refresh}><RefreshCw size={15} className={refreshing ? 'spinning' : ''}/> Refresh data</button> : tab === 'environment' ? <button className="refresh-button" onClick={()=>setUnit(unit === 'C' ? 'F' : 'C')} aria-label={`Change temperature unit; currently ${unit === 'C' ? 'Celsius' : 'Fahrenheit'}`}>°{unit} <ChevronDown size={13}/></button> : null}</div></div>
-    {tab === 'environment' ? <><div className="environment-intro"><Cloud size={18}/><span>Outdoor weather is a regional model estimate, not a reading from your AERO-MIST device.</span></div><WeatherPanel unit={unit}/></> : tab === 'history' ? <HistoryPanel/> : profile === 'device' ? <DevicePanel unit={unit}/> : <>
+    <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-button" onClick={()=>setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen} aria-controls="sidebar-navigation"><Menu size={21}/></button><span className="breadcrumb-muted">Workspace</span><span className="breadcrumb-slash">/</span><strong>{pageTitle}</strong></div><div className="topbar-right">{tab === 'system' || tab === 'history' ? <SystemProfileSelector profile={profile} onChange={setProfile}/> : <span className="demo-pill"><span/> {tab === 'environment' ? 'Outdoor estimates' : 'Not connected'}</span>}{!isAndroidWebView(navigator.userAgent) && <AppDownload/>}<ContextHelp tab={tab} profile={profile}/><div className="top-avatar">A</div></div></header>
+    <div className="content"><div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line"/> {tab === 'environment' ? 'OUTDOOR CONDITIONS' : tab === 'history' ? 'YOUR SYSTEM, OVER TIME' : 'YOUR SYSTEM, AT A GLANCE'}</div><h1>{pageTitle}<span>.</span></h1><p>{tab === 'environment' ? 'Keep an eye on local weather and humidity around you.' : tab === 'history' ? 'A place for your past system activity and readings.' : 'Your misting system readings, timers and comfort.'}</p></div><div className="heading-actions"><div className="date"><Clock3 size={15}/>{date}</div>{tab === 'system' && profile === 'sample' ? <button className="refresh-button" onClick={refresh}><RefreshCw size={15} className={refreshing ? 'spinning' : ''}/> Refresh data</button> : (tab === 'environment' || (tab === 'history' && profile === 'sample')) ? <button className="refresh-button" onClick={()=>setUnit(unit === 'C' ? 'F' : 'C')} aria-label={`Change temperature unit; currently ${unit === 'C' ? 'Celsius' : 'Fahrenheit'}`}>°{unit} <ChevronDown size={13}/></button> : null}</div></div>
+    {tab === 'environment' ? <><div className="environment-intro"><Cloud size={18}/><span>Local weather and humidity can help you plan for comfortable cooling.</span></div><WeatherPanel unit={unit} locationControl={locationControl}/></> : tab === 'history' ? <HistoryPanel profile={profile} records={sampleHistory} unit={unit}/> : profile === 'device' ? <DevicePanel unit={unit}/> : <>
     <div className="demo-banner"><Sparkles size={16}/><span><strong>System not connected.</strong> Readings, comfort and timers are sample data until your device is connected.</span></div>
-    <section className="hero" aria-label="System overview"><div className="hero-copy"><div className="hero-overline"><span className="live-dot"/> YOUR COOLING COMPANION</div><h2>A breath of fresh air<span>.</span></h2><p>A more comfortable space is just a mist away.<br/>AERO-MIST device data will appear here when connected.</p><div className="hero-status"><span className="status-icon"><Radio size={15}/></span><div><strong>System preview</strong><small>Sample device · No device connected</small></div></div></div><div className="hero-art" aria-hidden="true"><div className="orbit orbit-1"/><div className="orbit orbit-2"/><div className="orbit orbit-3"/><div className="art-core"><Wind size={58} strokeWidth={1.1}/></div><span className="art-dot dot-one"/><span className="art-dot dot-two"/><span className="art-dot dot-three"/><div className="art-label"><Droplets size={14}/> MADE FOR COMFORT</div></div><div className="hero-index">01 / AERO-MIST SYSTEM</div></section>
+    <section className="hero" aria-label="System overview"><div className="hero-copy"><div className="hero-overline"><span className="live-dot"/> YOUR COOLING COMPANION</div><h2>A Cooler Afternoon<span>.</span></h2><p>A more comfortable space is just a mist away.<br/>AERO-MIST device data will appear here when connected.</p><div className="hero-status"><span className="status-icon"><Radio size={15}/></span><div><strong>System preview</strong><small>Sample device · No device connected</small></div></div></div><div className="hero-art" aria-hidden="true"><div className="orbit orbit-1"/><div className="orbit orbit-2"/><div className="orbit orbit-3"/><div className="art-core"><img className="hero-logo" src={logoUrl} alt=""/></div><span className="art-dot dot-one"/><span className="art-dot dot-two"/><span className="art-dot dot-three"/></div><div className="hero-caption" aria-hidden="true"><div className="art-label"><Droplets size={14}/> MADE FOR COMFORT</div><div className="hero-index">01 / AERO-MIST SYSTEM</div></div></section>
     <div className="section-heading conditions-heading"><div><div className="section-kicker">THE LATEST SAMPLE DEVICE READINGS</div><h2>Current conditions <span className="heading-dot">●</span></h2></div><div className="updated"><span/> Updated {formatTime(updated)} <span className="updated-divider">|</span> <button className="unit-toggle" onClick={()=>setUnit(unit === 'C' ? 'F' : 'C')} aria-label={`Change temperature unit; currently ${unit === 'C' ? 'Celsius' : 'Fahrenheit'}`}>°{unit} <ChevronDown size={13}/></button></div></div>
     <div className="metrics-grid"><MetricCard icon={Thermometer} label="Temperature" value={temperature(readings.temperature)} unit={`°${unit}`} tone="mint" badge={<><ArrowDownRight size={13}/> Ambient</>} foot="Current air temperature"/><MetricCard icon={Droplets} label="Humidity" value={readings.humidity} unit="%" tone="blue" badge="Relative" foot="Moisture in the air"/><MetricCard icon={SunIcon} label="Heat index" value={temperature(readings.heatIndex)} unit={`°${unit}`} tone="peach" badge="Feels like" foot="Temperature + humidity"/><MetricCard icon={BatteryMedium} label="Battery" value={readings.battery} unit="%" tone="lime" badge={<><span className="tiny-dot"/> Good</>} foot="Sample battery level"/></div>
     <div className="section-heading lower-heading"><div><div className="section-kicker">KEEPING YOU IN THE LOOP</div><h2>System status <span className="heading-dot">●</span></h2></div><span className="sample-tag">SAMPLE CYCLE · SAVED IN THIS BROWSER</span></div>
@@ -140,7 +164,7 @@ function App() {
     <div className="dashboard-grid"><section className="panel trend-panel" id="trends"><div className="panel-header"><div><div className="section-kicker">A CLOSER LOOK</div><h2>Temperature trend</h2><p>See how your environment changes over time.</p></div><div className="range-select"><select value={range} onChange={e=>setRange(e.target.value)} aria-label="Temperature trend time range">{ranges.map(r=><option key={r}>{r}</option>)}</select><ChevronDown size={15}/></div></div><div className="chart-meta"><span><i/> Temperature</span><small>Sample data</small></div><TrendChart range={range} unit={unit}/></section>
     <section className="panel comfort-panel"><div className="panel-header"><div><div className="section-kicker">HOW IT FEELS</div><h2>Comfort meter</h2><p>A snapshot of your environment.</p></div><div className="panel-icon"><Gauge size={19}/></div></div><div className="gauge-wrap"><svg viewBox="0 0 220 125" className="gauge" role="img" aria-label="Sample comfort level: comfortable"><path d="M 22 110 A 88 88 0 0 1 198 110" fill="none" stroke="#eef2ef" strokeWidth="15" strokeLinecap="round"/><path d="M 22 110 A 88 88 0 0 1 198 110" fill="none" stroke="#35af8c" strokeWidth="15" strokeLinecap="round" strokeDasharray="193 277"/><circle cx="161" cy="38" r="6" fill="#fff" stroke="#2ba987" strokeWidth="3"/></svg><div className="gauge-center"><span>COMFORT LEVEL</span><strong>Comfortable</strong><small>Looking good <span>✦</span></small></div></div><div className="gauge-scale"><span>LESS COMFORTABLE</span><span>MORE COMFORTABLE</span></div><div className="comfort-note"><span><Check size={14}/></span> Your space is feeling pretty good.</div></section></div>
     </>}
-    <footer><div><Brand/><span>Made for a more comfortable everyday.</span></div><p>Thoughtfully designed for a breath of fresh air <span>✳</span></p></footer>
+    <footer><div><Brand/><span>Made for a more comfortable everyday.</span></div><p>Built To Make You Feel Cooler <span>✳</span></p></footer>
     </div></main></div>;
 }
 function SunIcon({size}) { return <Thermometer size={size}/>; }
